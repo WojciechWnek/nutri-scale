@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { RecipesModule } from './recipes/recipes.module';
+import { UploadModule } from './upload/upload.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { RecipesModule } from './recipes/recipes.module';
       synchronize: true, // This should be false in production
     }),
     RecipesModule,
+    UploadModule,
   ],
   controllers: [AppController],
   providers: [AppService],
