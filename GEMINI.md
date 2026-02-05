@@ -61,3 +61,7 @@ This project adheres to the following development conventions:
 - **TypeScript:** The project is written in TypeScript, with `tsconfig.json` specifying strict compilation settings and targeting `ES2023`.
 - **NestJS CLI:** The presence of `nest-cli.json` indicates the project follows standard NestJS CLI conventions for project structure, code generation, and compilation.
 - **Architectural Pattern:** The application follows the standard NestJS modular architecture, utilizing modules, controllers, and services for organized code.
+
+### Additional
+
+- Don't run `pnpm run start:dev` - i will run ti myself
