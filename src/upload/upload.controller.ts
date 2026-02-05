@@ -9,7 +9,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { Request } from 'express'; // Import Request to get Express namespace typings
 import * as path from 'path';
 import * as fs from 'fs';
-// import * as pdfParse from 'pdf-parse'; // Import pdf-parse
+import { PDFParse } from 'pdf-parse';
 import { ApiConsumes, ApiBody } from '@nestjs/swagger'; // Import Swagger decorators
 
 @Controller('upload')
@@ -59,14 +59,15 @@ export class UploadController {
     // Save the file to the temporary directory
     fs.writeFileSync(filePath, file.buffer);
 
-    // let extractedText = '';
-    // try {
-    //   const data = await pdfParse(file.buffer);
-    //   extractedText = data.text;
-    // } catch (error) {
-    //   console.error('Error parsing PDF:', error);
-    //   throw new BadRequestException('Failed to parse PDF file.');
-    // }
+    let extractedText = '';
+    try {
+      const parser = new PDFParse(new Uint8Array(file.buffer));
+      const result = await parser.getText();
+      extractedText = result.text;
+    } catch (error) {
+      console.error('Error parsing PDF:', error);
+      throw new BadRequestException('Failed to parse PDF file.');
+    }
 
     return {
       message: 'PDF file uploaded successfully!',
@@ -75,7 +76,7 @@ export class UploadController {
       originalName: file.originalname,
       mimetype: file.mimetype,
       size: file.size,
-      // extractedText: extractedText, // Return the extracted text
+      extractedText: extractedText, // Return the extracted text
     };
   }
 }
