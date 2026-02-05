@@ -1,6 +1,8 @@
+import { GoogleGenerativeAI, GenerativeModel } from '@google/generative-ai';
+
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { GoogleGenerativeAI, GenerativeModel } from '@google/generative-ai';
+
 import { Recipe } from '../recipes/entities/recipe.entity';
 
 @Injectable()
@@ -17,7 +19,7 @@ export class PdfExtractorService {
     const genAI = new GoogleGenerativeAI(apiKey);
     this.geminiModel = genAI.getGenerativeModel({
       model: 'gemini-2.5-flash-lite',
-    }); // Using gemini-pro for text tasks
+    });
   }
 
   async extractRecipeData(text: string): Promise<Partial<Recipe>> {
@@ -43,7 +45,7 @@ JSON Output:
 
     try {
       const result = await this.geminiModel.generateContent(prompt);
-      const response = await result.response;
+      const response = result.response;
       const jsonText = response.text().trim();
 
       // Attempt to clean up common issues with AI-generated JSON (e.g., markdown code blocks)
