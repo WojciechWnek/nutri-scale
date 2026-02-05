@@ -114,7 +114,6 @@ export class UploadController {
           parsedRecipe: parsedRecipe,
           jobId: jobId,
         });
-        // await new Promise((resolve) => setTimeout(resolve, 20000));
       } catch (error) {
         console.error('Error parsing PDF:', error);
         this.sseService.sendEvent(jobId, 'parsingStatus', {
