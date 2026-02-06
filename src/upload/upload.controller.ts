@@ -14,15 +14,16 @@ import { ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { SseService } from '../sse/sse.service';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
-import { v4 as uuidv4 } from 'uuid';
 import type { Request } from 'express';
 import { UploadService } from './upload.service';
+import { RecipesService } from '../recipes/recipes.service';
 
 @Controller('upload')
 export class UploadController {
   constructor(
     private readonly sseService: SseService,
     private readonly uploadService: UploadService,
+    private readonly recipesService: RecipesService,
   ) {}
 
   @Post('pdf')
@@ -58,14 +59,14 @@ export class UploadController {
       throw new BadRequestException('No PDF file provided!');
     }
 
-    const jobId = uuidv4();
+    // Create an empty recipe to get a persistent ID.
+    const recipe = await this.recipesService.createEmpty();
 
-    // Delegate the entire processing job to the service.
-    // This method runs in the background and does not block the response.
-    this.uploadService.processPdfJob(file, jobId);
+    // Delegate the processing, passing the recipe ID.
+    this.uploadService.processPdfJob(file, recipe.id);
 
-    // Return the job ID to the client immediately.
-    return { jobId };
+    // Return the recipe ID to the client as the jobId.
+    return { jobId: recipe.id };
   }
 
   @Sse('status/:jobId')

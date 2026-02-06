@@ -1,13 +1,12 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ConfigModule } from '@nestjs/config'; // Import ConfigModule
+import { ConfigModule } from '@nestjs/config';
 import { RecipesModule } from './recipes/recipes.module';
 import { UploadModule } from './upload/upload.module';
-import { SseService } from './sse/sse.service';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }), // Load environment variables globally
+    ConfigModule.forRoot({ isGlobal: true }),
     TypeOrmModule.forRoot({
       type: 'sqlite',
       database: 'nutri-scale.sqlite',
@@ -18,6 +17,6 @@ import { SseService } from './sse/sse.service';
     UploadModule,
   ],
   controllers: [],
-  providers: [SseService],
+  providers: [],
 })
 export class AppModule {}

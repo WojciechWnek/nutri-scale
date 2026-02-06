@@ -3,6 +3,8 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import { SseService } from '../sse/sse.service';
 import { PdfExtractorService } from '../pdf-extractor/pdf-extractor.service';
+import { RecipesService } from '../recipes/recipes.service';
+import { JobStatus } from '../recipes/entities/recipe.entity';
 
 @Injectable()
 export class UploadService {
@@ -12,6 +14,7 @@ export class UploadService {
   constructor(
     private readonly sseService: SseService,
     private readonly pdfExtractorService: PdfExtractorService,
+    private readonly recipesService: RecipesService,
   ) {
     this.ensureUploadDirExists();
   }
@@ -27,18 +30,25 @@ export class UploadService {
     }
   }
 
-  // This method runs in the background. It does not block the initial HTTP request.
-  async processPdfJob(file: Express.Multer.File, jobId: string): Promise<void> {
-    this.logger.log(`Starting PDF processing for job: ${jobId}`);
+  async processPdfJob(
+    file: Express.Multer.File,
+    recipeId: string,
+  ): Promise<void> {
+    const jobId = recipeId; // Use recipeId as the jobId for SSE events
+    this.logger.log(`Starting PDF processing for recipeId: ${jobId}`);
 
-    // Emit initial status
     this.sseService.sendEvent(jobId, 'parsingStatus', {
       status: 'started',
       filename: file.originalname,
     });
 
+    const filename = `${Date.now()}-${file.originalname}`;
+    const filePath = path.join(this.uploadDir, filename);
+
     try {
-      // Step 1: Extract Text
+      await fs.writeFile(filePath, file.buffer);
+      this.logger.log(`File saved to ${filePath}`);
+
       this.sseService.sendEvent(jobId, 'parsingStatus', {
         status: 'extracting_text',
       });
@@ -46,14 +56,17 @@ export class UploadService {
         file.buffer,
       );
 
-      // Step 2: Process with AI
       this.sseService.sendEvent(jobId, 'parsingStatus', {
         status: 'processing_ai',
       });
       const parsedRecipe =
         await this.pdfExtractorService.extractRecipeData(extractedText);
 
-      // Step 3: Job Finished
+      await this.recipesService.update(jobId, {
+        ...parsedRecipe,
+        status: JobStatus.COMPLETED,
+      });
+
       this.sseService.sendEvent(jobId, 'parsingStatus', {
         status: 'finished',
         parsedRecipe: parsedRecipe,
@@ -62,12 +75,15 @@ export class UploadService {
       this.logger.log(`Successfully finished PDF processing for job: ${jobId}`);
     } catch (error) {
       this.logger.error(`Job ${jobId} failed:`, error);
+      await this.recipesService.update(jobId, {
+        status: JobStatus.FAILED,
+        error: error.message,
+      });
       this.sseService.sendEvent(jobId, 'parsingStatus', {
         status: 'failed',
         error: error.message,
       });
     } finally {
-      // Step 4: Always complete the stream
       this.logger.log(`Completing SSE stream for job: ${jobId}`);
       this.sseService.completeStream(jobId);
     }
