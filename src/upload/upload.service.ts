@@ -30,6 +30,15 @@ export class UploadService {
     }
   }
 
+  private async cleanupFile(filePath: string): Promise<void> {
+    try {
+      await fs.unlink(filePath);
+      this.logger.log(`Cleaned up file: ${filePath}`);
+    } catch (error) {
+      this.logger.warn(`Failed to cleanup file ${filePath}: ${error.message}`);
+    }
+  }
+
   async processPdfJob(
     file: Express.Multer.File,
     recipeId: string,
@@ -43,9 +52,10 @@ export class UploadService {
     });
 
     const filename = `${Date.now()}-${file.originalname}`;
-    const filePath = path.join(this.uploadDir, filename);
+    let filePath: string | null = null;
 
     try {
+      filePath = path.join(this.uploadDir, filename);
       await fs.writeFile(filePath, file.buffer);
       this.logger.log(`File saved to ${filePath}`);
 
@@ -84,6 +94,9 @@ export class UploadService {
         error: error.message,
       });
     } finally {
+      if (filePath) {
+        await this.cleanupFile(filePath);
+      }
       this.logger.log(`Completing SSE stream for job: ${jobId}`);
       this.sseService.completeStream(jobId);
     }
