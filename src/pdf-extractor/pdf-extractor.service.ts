@@ -1,24 +1,26 @@
-import { GoogleGenerativeAI, GenerativeModel } from '@google/generative-ai';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Recipe } from '../recipes/entities/recipe.entity';
 import { PDFParse } from 'pdf-parse';
+import Groq from 'groq-sdk';
 
 @Injectable()
 export class PdfExtractorService {
   private readonly logger = new Logger(PdfExtractorService.name);
-  private geminiModel: GenerativeModel;
+  private groq: Groq;
+  private readonly modelName: string;
 
   constructor(private readonly configService: ConfigService) {
-    const apiKey = this.configService.get<string>('GEMINI_API_KEY');
+    const apiKey = this.configService.get<string>('GROQ_API_KEY');
     if (!apiKey) {
-      this.logger.error('GEMINI_API_KEY is not set in environment variables.');
-      throw new Error('GEMINI_API_KEY is not configured.');
+      this.logger.error('GROQ_API_KEY is not set in environment variables.');
+      throw new Error('GROQ_API_KEY is not configured.');
     }
-    const genAI = new GoogleGenerativeAI(apiKey);
-    this.geminiModel = genAI.getGenerativeModel({
-      model: 'gemini-2.5-flash-lite',
-    });
+    this.groq = new Groq({ apiKey });
+    this.modelName = this.configService.get<string>(
+      'GROQ_MODEL',
+      'llama-3.3-70b-versatile',
+    );
   }
 
   /**
@@ -40,7 +42,7 @@ export class PdfExtractorService {
   }
 
   async extractRecipeData(text: string): Promise<Partial<Recipe>> {
-    this.logger.log('Sending text to Gemini API for processing...');
+    this.logger.log('Sending text to Groq API for processing...');
     const prompt = `Given the following recipe text, extract the recipe details into a JSON object matching the TypeScript interface below. If a field is not found, omit it. For ingredients, try to separate name, quantity, and unit. For instructions, provide an array of strings for each step.
 
 TypeScript Interface for Recipe:
@@ -57,23 +59,37 @@ interface Recipe {
 Recipe Text:
 ${text}
 
-JSON Output:
-`;
+IMPORTANT: Return ONLY the raw JSON object. Do not wrap it in markdown code blocks or add any other text.`;
 
     try {
-      const result = await this.geminiModel.generateContent(prompt);
-      const response = result.response;
-      const jsonText = response.text().trim();
+      const completion = await this.groq.chat.completions.create({
+        messages: [
+          {
+            role: 'system',
+            content:
+              'You are a helpful assistant that extracts structured data from recipes. You output only valid JSON.',
+          },
+          {
+            role: 'user',
+            content: prompt,
+          },
+        ],
+        model: this.modelName,
+        temperature: 0,
+        response_format: { type: 'json_object' },
+      });
 
-      // Attempt to clean up common issues with AI-generated JSON (e.g., markdown code blocks)
-      const cleanedJsonText = jsonText.replace(/```json\n?|\n?```/g, '').trim();
+      const jsonText = completion.choices[0]?.message?.content?.trim();
 
-      const parsedData: Partial<Recipe> = JSON.parse(cleanedJsonText);
-      this.logger.log('Gemini API response parsed successfully.');
+      if (!jsonText) {
+        throw new Error('Empty response from Groq API');
+      }
+
+      const parsedData = JSON.parse(jsonText) as Partial<Recipe>;
+      this.logger.log('Groq API response parsed successfully.');
       return parsedData;
     } catch (error) {
-      this.logger.error('Error calling Gemini API or parsing response:', error);
-      // Attempt to return partial data even on error if possible, or throw
+      this.logger.error('Error calling Groq API or parsing response:', error);
       throw new Error('Failed to process recipe text with AI model.');
     }
   }
