@@ -3,6 +3,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
 import { RecipesModule } from './recipes/recipes.module';
 import { UploadModule } from './upload/upload.module';
+import { UsersModule } from './users/users.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -15,6 +17,8 @@ import { UploadModule } from './upload/upload.module';
     }),
     RecipesModule,
     UploadModule,
+    UsersModule,
+    AuthModule,
   ],
   controllers: [],
   providers: [],
