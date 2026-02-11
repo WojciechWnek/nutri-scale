@@ -12,8 +12,8 @@ import type { Response } from 'express';
 @Injectable()
 export class AuthService {
   constructor(
-    private prisma: PrismaService,
-    private jwtService: JwtService,
+    private readonly prisma: PrismaService,
+    private readonly jwtService: JwtService,
   ) {}
 
   async signup(authDto: AuthDto) {
@@ -67,7 +67,11 @@ export class AuthService {
       throw new ForbiddenException();
     }
 
-    res.cookie('access_token', token);
+    res.cookie('access_token', token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'strict',
+    });
 
     return {
       message: 'User signed in successfully',
