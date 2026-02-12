@@ -4,7 +4,7 @@ import * as path from 'path';
 import { SseService } from '../sse/sse.service';
 import { PdfExtractorService } from '../pdf-extractor/pdf-extractor.service';
 import { RecipesService } from '../recipes/recipes.service';
-import { JobStatus } from '../recipes/entities/recipe.entity';
+import { JobStatus } from 'src/generated/prisma/enums';
 
 @Injectable()
 export class UploadService {

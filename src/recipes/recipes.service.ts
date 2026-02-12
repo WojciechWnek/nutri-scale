@@ -1,15 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { PrismaService } from 'prisma/prisma.service';
 import { CreateRecipeDto } from './dto/create-recipe.dto';
-import { Recipe, JobStatus } from './entities/recipe.entity';
+import { JobStatus } from 'src/generated/prisma/enums';
 
 @Injectable()
 export class RecipesService {
-  constructor(
-    @InjectRepository(Recipe)
-    private readonly recipeRepository: Repository<Recipe>,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   /**
    * Creates a new recipe from a DTO (e.g., from a form submission).
@@ -17,12 +13,18 @@ export class RecipesService {
    * @param createRecipeDto The recipe data.
    * @returns The newly created recipe.
    */
-  create(createRecipeDto: CreateRecipeDto): Promise<Recipe> {
-    const recipe = this.recipeRepository.create({
-      ...createRecipeDto,
-      status: JobStatus.COMPLETED, // Mark as completed since it's created directly
+  async create(createRecipeDto: CreateRecipeDto) {
+    const ingredients = createRecipeDto.ingredients || [];
+    const instructions = createRecipeDto.instructions || [];
+
+    return this.prisma.recipe.create({
+      data: {
+        ...createRecipeDto,
+        ingredients: ingredients as any,
+        instructions: instructions as any,
+        status: JobStatus.COMPLETED,
+      },
     });
-    return this.recipeRepository.save(recipe);
   }
 
   /**
@@ -30,43 +32,56 @@ export class RecipesService {
    * This is the first step in the async creation process.
    * @returns The newly created recipe stub.
    */
-  createEmpty(): Promise<Recipe> {
-    const recipe = this.recipeRepository.create({
-      status: JobStatus.PROCESSING,
+  async createEmpty() {
+    return this.prisma.recipe.create({
+      data: {
+        status: JobStatus.PROCESSING,
+      },
     });
-    return this.recipeRepository.save(recipe);
   }
 
-  findAll(): Promise<Recipe[]> {
-    // Optionally, you might want to filter out non-completed recipes
-    return this.recipeRepository.find({
+  async findAll() {
+    return this.prisma.recipe.findMany({
       where: { status: JobStatus.COMPLETED },
     });
   }
 
-  async findOne(id: string): Promise<Recipe> {
-    const recipe = await this.recipeRepository.findOneBy({ id });
+  async findOne(id: string) {
+    const recipe = await this.prisma.recipe.findUnique({
+      where: { id },
+    });
+
     if (!recipe) {
       throw new NotFoundException(`Recipe with ID ${id} not found`);
     }
+
     return recipe;
   }
 
-  async update(id: string, updatePayload: Partial<Recipe>): Promise<Recipe> {
-    const recipe = await this.recipeRepository.preload({
-      id: id,
-      ...updatePayload,
-    });
-    if (!recipe) {
-      throw new NotFoundException(`Recipe with ID ${id} not found`);
+  async update(id: string, updatePayload: any) {
+    try {
+      return await this.prisma.recipe.update({
+        where: { id },
+        data: updatePayload,
+      });
+    } catch (error) {
+      if (error.code === 'P2025') {
+        throw new NotFoundException(`Recipe with ID ${id} not found`);
+      }
+      throw error;
     }
-    return this.recipeRepository.save(recipe);
   }
 
   async remove(id: string): Promise<void> {
-    const result = await this.recipeRepository.delete(id);
-    if (result.affected === 0) {
-      throw new NotFoundException(`Recipe with ID ${id} not found`);
+    try {
+      await this.prisma.recipe.delete({
+        where: { id },
+      });
+    } catch (error) {
+      if (error.code === 'P2025') {
+        throw new NotFoundException(`Recipe with ID ${id} not found`);
+      }
+      throw error;
     }
   }
 }

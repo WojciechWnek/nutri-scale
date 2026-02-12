@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Recipe } from '../recipes/entities/recipe.entity';
+import { RecipeModel } from 'src/generated/prisma/models/Recipe';
 import { PDFParse } from 'pdf-parse';
 import Groq from 'groq-sdk';
 
@@ -41,7 +41,7 @@ export class PdfExtractorService {
     }
   }
 
-  async extractRecipeData(text: string): Promise<Partial<Recipe>> {
+  async extractRecipeData(text: string): Promise<Partial<RecipeModel>> {
     this.logger.log('Sending text to Groq API for processing...');
     const prompt = `Given the following recipe text, extract the recipe details into a JSON object matching the TypeScript interface below. If a field is not found, omit it. For ingredients, try to separate name, quantity, and unit. For instructions, provide an array of strings for each step.
 
@@ -85,7 +85,7 @@ IMPORTANT: Return ONLY the raw JSON object. Do not wrap it in markdown code bloc
         throw new Error('Empty response from Groq API');
       }
 
-      const parsedData = JSON.parse(jsonText) as Partial<Recipe>;
+      const parsedData = JSON.parse(jsonText) as Partial<RecipeModel>;
       this.logger.log('Groq API response parsed successfully.');
       return parsedData;
     } catch (error) {

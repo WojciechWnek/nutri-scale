@@ -20,7 +20,7 @@ const config: runtime.GetPrismaClientConfig = {
   "clientVersion": "7.3.0",
   "engineVersion": "9d6ad21cbbceab97458517b147a6a09ff43aa735",
   "activeProvider": "postgresql",
-  "inlineSchema": "// This is your Prisma schema file,\n// learn more about it in the docs: https://pris.ly/d/prisma-schema\n\n// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?\n// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init\n\ngenerator client {\n  provider     = \"prisma-client\"\n  output       = \"../src/generated/prisma\"\n  moduleFormat = \"cjs\"\n}\n\ndatasource db {\n  provider = \"postgresql\"\n}\n\nmodel User {\n  id             String   @id @default(uuid())\n  email          String   @unique\n  hashedPassword String\n  createdAt      DateTime @default(now())\n  updatedAt      DateTime @updatedAt()\n}\n",
+  "inlineSchema": "// This is your Prisma schema file,\n// learn more about it in the docs: https://pris.ly/d/prisma-schema\n\n// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?\n// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init\n\ngenerator client {\n  provider     = \"prisma-client\"\n  output       = \"../src/generated/prisma\"\n  moduleFormat = \"cjs\"\n}\n\ndatasource db {\n  provider = \"postgresql\"\n}\n\nenum JobStatus {\n  PROCESSING\n  COMPLETED\n  FAILED\n}\n\nmodel User {\n  id             String   @id @default(uuid())\n  email          String   @unique\n  hashedPassword String\n  createdAt      DateTime @default(now())\n  updatedAt      DateTime @updatedAt()\n}\n\nmodel Recipe {\n  id           String    @id @default(uuid())\n  status       JobStatus @default(PROCESSING)\n  name         String?\n  description  String?\n  ingredients  Json?\n  instructions Json?\n  prepTime     Int?\n  cookTime     Int?\n  servings     Int?\n  error        String?\n  createdAt    DateTime  @default(now())\n  updatedAt    DateTime  @updatedAt()\n}\n",
   "runtimeDataModel": {
     "models": {},
     "enums": {},
@@ -28,7 +28,7 @@ const config: runtime.GetPrismaClientConfig = {
   }
 }
 
-config.runtimeDataModel = JSON.parse("{\"models\":{\"User\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"email\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"hashedPassword\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":null}},\"enums\":{},\"types\":{}}")
+config.runtimeDataModel = JSON.parse("{\"models\":{\"User\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"email\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"hashedPassword\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":null},\"Recipe\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"status\",\"kind\":\"enum\",\"type\":\"JobStatus\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"description\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"ingredients\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"instructions\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"prepTime\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"cookTime\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"servings\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"error\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":null}},\"enums\":{},\"types\":{}}")
 
 async function decodeBase64AsWasm(wasmBase64: string): Promise<WebAssembly.Module> {
   const { Buffer } = await import('node:buffer')
@@ -185,6 +185,16 @@ export interface PrismaClient<
     * ```
     */
   get user(): Prisma.UserDelegate<ExtArgs, { omit: OmitOpts }>;
+
+  /**
+   * `prisma.recipe`: Exposes CRUD operations for the **Recipe** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more Recipes
+    * const recipes = await prisma.recipe.findMany()
+    * ```
+    */
+  get recipe(): Prisma.RecipeDelegate<ExtArgs, { omit: OmitOpts }>;
 }
 
 export function getPrismaClientClass(): PrismaClientConstructor {

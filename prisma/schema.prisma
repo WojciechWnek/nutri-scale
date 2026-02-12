@@ -14,11 +14,31 @@ datasource db {
   provider = "postgresql"
 }
 
+enum JobStatus {
+  PROCESSING
+  COMPLETED
+  FAILED
+}
 
 model User {
   id               String      @id @default(uuid())
   email            String      @unique
   hashedPassword   String      
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt()
+}
+
+model Recipe {
+  id               String      @id @default(uuid())
+  status           JobStatus   @default(PROCESSING)
+  name             String?
+  description      String?
+  ingredients      Json?
+  instructions     Json?
+  prepTime         Int?
+  cookTime         Int?
+  servings         Int?
+  error            String?
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt()
 }
