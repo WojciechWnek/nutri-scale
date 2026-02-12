@@ -5,6 +5,8 @@ import { UploadModule } from './upload/upload.module';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { PrismaModule } from 'prisma/prisma.module';
+import { IngredientsModule } from './ingredients/ingredients.module';
+import { NutritionModule } from './nutrition/nutrition.module';
 
 @Module({
   imports: [
@@ -14,6 +16,8 @@ import { PrismaModule } from 'prisma/prisma.module';
     UsersModule,
     AuthModule,
     PrismaModule,
+    IngredientsModule,
+    NutritionModule,
   ],
   controllers: [],
   providers: [],

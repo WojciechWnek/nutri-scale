@@ -11,10 +11,9 @@ async function bootstrap() {
     .setTitle('Nutri-Scale API')
     .setDescription('API documentation for the Nutri-Scale application')
     .setVersion('1.0')
-    .addTag('recipes') // You can add more tags as you develop more modules
     .build();
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api', app, document); // 'api' is the path to access Swagger UI
+  SwaggerModule.setup('api', app, document);
 
   app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
 
