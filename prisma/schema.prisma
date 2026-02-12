@@ -46,8 +46,9 @@ model Recipe {
 }
 
 model Ingredient {
-  id    String   @id @default(uuid())
-  name  String   @unique
+  id          String   @id @default(uuid())
+  name        String
+  normalized  String   @unique
 
   recipeIngredients RecipeIngredient[]
   nutrition Nutrition?

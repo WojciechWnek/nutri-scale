@@ -12,6 +12,13 @@ export class RecipesService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
+   * Normalizes ingredient name to avoid duplicates
+   */
+  private normalizeName(name: string): string {
+    return name.toLowerCase().trim().replace(/\s+/g, ' ');
+  }
+
+  /**
    * Creates a new recipe from a DTO (e.g., from a form submission).
    * The recipe is considered complete by default.
    * Also creates related ingredients and instructions if provided.
@@ -38,18 +45,17 @@ export class RecipesService {
         createRecipeDto.ingredients.length > 0
       ) {
         for (const ingredient of createRecipeDto.ingredients) {
-          // Find or create the ingredient
-          let product = await tx.ingredient.findUnique({
-            where: { name: ingredient.name },
-          });
+          const normalized = this.normalizeName(ingredient.name);
 
-          if (!product) {
-            product = await tx.ingredient.create({
-              data: {
-                name: ingredient.name,
-              },
-            });
-          }
+          // Find or create the ingredient using normalized name
+          const product = await tx.ingredient.upsert({
+            where: { normalized },
+            update: {},
+            create: {
+              name: ingredient.name.trim(),
+              normalized,
+            },
+          });
 
           // Create the recipe ingredient link
           await tx.recipeIngredient.create({
@@ -144,17 +150,16 @@ export class RecipesService {
 
       // Create or find Ingredients and create RecipeIngredients
       for (const ingredient of parsedData.ingredients) {
-        let product = await tx.ingredient.findUnique({
-          where: { name: ingredient.name },
-        });
+        const normalized = this.normalizeName(ingredient.name);
 
-        if (!product) {
-          product = await tx.ingredient.create({
-            data: {
-              name: ingredient.name,
-            },
-          });
-        }
+        const product = await tx.ingredient.upsert({
+          where: { normalized },
+          update: {},
+          create: {
+            name: ingredient.name.trim(),
+            normalized,
+          },
+        });
 
         await tx.recipeIngredient.create({
           data: {
@@ -302,18 +307,17 @@ export class RecipesService {
 
       // Create or find Ingredients and create RecipeIngredients
       for (const ingredient of parsedData.ingredients) {
-        // Find or create the ingredient
-        let product = await tx.ingredient.findUnique({
-          where: { name: ingredient.name },
-        });
+        const normalized = this.normalizeName(ingredient.name);
 
-        if (!product) {
-          product = await tx.ingredient.create({
-            data: {
-              name: ingredient.name,
-            },
-          });
-        }
+        // Find or create the ingredient
+        const product = await tx.ingredient.upsert({
+          where: { normalized },
+          update: {},
+          create: {
+            name: ingredient.name.trim(),
+            normalized,
+          },
+        });
 
         // Create the recipe ingredient link
         await tx.recipeIngredient.create({

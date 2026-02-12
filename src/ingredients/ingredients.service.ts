@@ -11,6 +11,34 @@ import { UpdateIngredientDto } from './dto/update-ingredient.dto';
 export class IngredientsService {
   constructor(private readonly prisma: PrismaService) {}
 
+  /**
+   * Normalizes ingredient name to avoid duplicates
+   * Converts to lowercase, trims whitespace, removes extra spaces
+   */
+  private normalizeName(name: string): string {
+    return name.toLowerCase().trim().replace(/\s+/g, ' ');
+  }
+
+  /**
+   * Finds or creates an ingredient using connectOrCreate pattern
+   * This prevents duplicates by using normalized name
+   */
+  async findOrCreate(name: string) {
+    const normalized = this.normalizeName(name);
+
+    return this.prisma.ingredient.upsert({
+      where: { normalized },
+      update: {}, // If exists, don't update anything
+      create: {
+        name: name.trim(), // Keep original formatting for display
+        normalized,
+      },
+      include: {
+        nutrition: true,
+      },
+    });
+  }
+
   async getNutrition(ingredientId: string) {
     const ingredient = await this.prisma.ingredient.findUnique({
       where: { id: ingredientId },
@@ -111,10 +139,13 @@ export class IngredientsService {
   }
 
   async create(createIngredientDto: CreateIngredientDto) {
+    const normalized = this.normalizeName(createIngredientDto.name);
+
     try {
       return await this.prisma.ingredient.create({
         data: {
-          name: createIngredientDto.name,
+          name: createIngredientDto.name.trim(),
+          normalized,
         },
         include: {
           nutrition: true,
@@ -123,7 +154,7 @@ export class IngredientsService {
     } catch (error) {
       if (error.code === 'P2002') {
         throw new ConflictException(
-          `Ingredient with name "${createIngredientDto.name}" already exists`,
+          `Ingredient with normalized name "${normalized}" already exists`,
         );
       }
       throw error;
@@ -157,8 +188,9 @@ export class IngredientsService {
   }
 
   async findByName(name: string) {
+    const normalized = this.normalizeName(name);
     return this.prisma.ingredient.findUnique({
-      where: { name },
+      where: { normalized },
       include: {
         nutrition: true,
       },
@@ -167,9 +199,17 @@ export class IngredientsService {
 
   async update(id: string, updateIngredientDto: UpdateIngredientDto) {
     try {
+      const data: any = { ...updateIngredientDto };
+
+      // If name is being updated, also update normalized
+      if (updateIngredientDto.name) {
+        data.normalized = this.normalizeName(updateIngredientDto.name);
+        data.name = updateIngredientDto.name.trim();
+      }
+
       const ingredient = await this.prisma.ingredient.update({
         where: { id },
-        data: updateIngredientDto,
+        data,
         include: {
           nutrition: true,
         },
@@ -180,7 +220,9 @@ export class IngredientsService {
         throw new NotFoundException(`Ingredient with ID ${id} not found`);
       }
       if (error.code === 'P2002') {
-        throw new ConflictException(`Ingredient with this name already exists`);
+        throw new ConflictException(
+          `Ingredient with this normalized name already exists`,
+        );
       }
       throw error;
     }
