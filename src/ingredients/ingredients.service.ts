@@ -6,6 +6,7 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateIngredientDto } from './dto/create-ingredient.dto';
 import { UpdateIngredientDto } from './dto/update-ingredient.dto';
+import Fuse from 'fuse.js';
 
 @Injectable()
 export class IngredientsService {
@@ -20,17 +21,66 @@ export class IngredientsService {
   }
 
   /**
-   * Finds or creates an ingredient using connectOrCreate pattern
-   * This prevents duplicates by using normalized name
+   * Smart findOrCreate with Fuzzy Matching using Fuse.js
+   * First tries exact match by normalized name
+   * If no exact match, uses fuzzy matching with threshold 0.3
+   * Returns existing ingredient if similar enough, otherwise creates new
    */
   async findOrCreate(name: string) {
     const normalized = this.normalizeName(name);
 
-    return this.prisma.ingredient.upsert({
+    // First try exact match
+    const exactMatch = await this.prisma.ingredient.findUnique({
       where: { normalized },
-      update: {}, // If exists, don't update anything
-      create: {
-        name: name.trim(), // Keep original formatting for display
+      include: { nutrition: true },
+    });
+
+    if (exactMatch) {
+      return exactMatch;
+    }
+
+    // If no exact match, try fuzzy matching
+    const allIngredients = await this.prisma.ingredient.findMany({
+      select: { id: true, name: true, normalized: true },
+    });
+
+    if (allIngredients.length > 0) {
+      // Use Fuse.js for fuzzy matching
+      // Include both original names and normalized names for better matching
+      const searchableNames = allIngredients.map((ing) => ({
+        id: ing.id,
+        name: ing.name,
+        normalized: ing.normalized,
+      }));
+
+      const fuse = new Fuse(searchableNames, {
+        keys: ['name', 'normalized'],
+        threshold: 0.3,
+        includeScore: true,
+      });
+
+      const results = fuse.search(name);
+
+      if (results.length > 0) {
+        const bestMatch = results[0];
+        const score = bestMatch.score ?? 1;
+
+        // Fuse.js: lower score = better match (0 = perfect, 1 = no match)
+        // threshold: 0.3 means score <= 0.3 is a good match
+        if (score <= 0.3) {
+          // Return the matched ingredient with full data
+          return this.prisma.ingredient.findUnique({
+            where: { id: bestMatch.item.id },
+            include: { nutrition: true },
+          });
+        }
+      }
+    }
+
+    // No match found, create new ingredient
+    return this.prisma.ingredient.create({
+      data: {
+        name: name.trim(),
         normalized,
       },
       include: {

@@ -6,10 +6,14 @@ import {
   ParsedRecipesBatchDto,
 } from './dto/parsed-recipe.dto';
 import { JobStatus } from 'src/generated/prisma/enums';
+import { IngredientsService } from '../ingredients/ingredients.service';
 
 @Injectable()
 export class RecipesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly ingredientsService: IngredientsService,
+  ) {}
 
   /**
    * Normalizes ingredient name to avoid duplicates
@@ -26,6 +30,30 @@ export class RecipesService {
    * @returns The newly created recipe with relations.
    */
   async create(createRecipeDto: CreateRecipeDto) {
+    // First, resolve all ingredients with fuzzy matching (outside transaction)
+    const resolvedIngredients: Array<{
+      productId: string;
+      quantity: number | undefined;
+      unit: string | undefined;
+    }> = [];
+    if (createRecipeDto.ingredients && createRecipeDto.ingredients.length > 0) {
+      for (const ingredient of createRecipeDto.ingredients) {
+        const product = await this.ingredientsService.findOrCreate(
+          ingredient.name,
+        );
+        if (!product) {
+          throw new Error(
+            `Failed to find or create ingredient: ${ingredient.name}`,
+          );
+        }
+        resolvedIngredients.push({
+          productId: product.id,
+          quantity: ingredient.quantity,
+          unit: ingredient.unit,
+        });
+      }
+    }
+
     return this.prisma.$transaction(async (tx) => {
       // Create the recipe
       const recipe = await tx.recipe.create({
@@ -39,34 +67,16 @@ export class RecipesService {
         },
       });
 
-      // Create ingredients if provided
-      if (
-        createRecipeDto.ingredients &&
-        createRecipeDto.ingredients.length > 0
-      ) {
-        for (const ingredient of createRecipeDto.ingredients) {
-          const normalized = this.normalizeName(ingredient.name);
-
-          // Find or create the ingredient using normalized name
-          const product = await tx.ingredient.upsert({
-            where: { normalized },
-            update: {},
-            create: {
-              name: ingredient.name.trim(),
-              normalized,
-            },
-          });
-
-          // Create the recipe ingredient link
-          await tx.recipeIngredient.create({
-            data: {
-              recipeId: recipe.id,
-              productId: product.id,
-              quantity: ingredient.quantity,
-              unit: ingredient.unit,
-            },
-          });
-        }
+      // Create recipe ingredient links using resolved IDs
+      for (const resolved of resolvedIngredients) {
+        await tx.recipeIngredient.create({
+          data: {
+            recipeId: recipe.id,
+            productId: resolved.productId,
+            quantity: resolved.quantity,
+            unit: resolved.unit,
+          },
+        });
       }
 
       // Create instructions if provided
@@ -90,15 +100,9 @@ export class RecipesService {
         where: { id: recipe.id },
         include: {
           ingredients: {
-            include: {
-              product: true,
-            },
+            include: { product: true },
           },
-          instructions: {
-            orderBy: {
-              step: 'asc',
-            },
-          },
+          instructions: { orderBy: { step: 'asc' } },
         },
       });
 
@@ -135,6 +139,30 @@ export class RecipesService {
    * @returns The newly created recipe with relations.
    */
   private async createFromParsedData(parsedData: ParsedRecipeData) {
+    // First, resolve all ingredients with fuzzy matching (outside transaction)
+    const resolvedIngredients: Array<{
+      productId: string;
+      quantity: number;
+      unit: string | undefined;
+    }> = [];
+    if (parsedData.ingredients && parsedData.ingredients.length > 0) {
+      for (const ingredient of parsedData.ingredients) {
+        const product = await this.ingredientsService.findOrCreate(
+          ingredient.name,
+        );
+        if (!product) {
+          throw new Error(
+            `Failed to find or create ingredient: ${ingredient.name}`,
+          );
+        }
+        resolvedIngredients.push({
+          productId: product.id,
+          quantity: ingredient.quantity,
+          unit: ingredient.unit,
+        });
+      }
+    }
+
     return this.prisma.$transaction(async (tx) => {
       // Create the recipe
       const recipe = await tx.recipe.create({
@@ -148,25 +176,14 @@ export class RecipesService {
         },
       });
 
-      // Create or find Ingredients and create RecipeIngredients
-      for (const ingredient of parsedData.ingredients) {
-        const normalized = this.normalizeName(ingredient.name);
-
-        const product = await tx.ingredient.upsert({
-          where: { normalized },
-          update: {},
-          create: {
-            name: ingredient.name.trim(),
-            normalized,
-          },
-        });
-
+      // Create recipe ingredient links using resolved IDs
+      for (const resolved of resolvedIngredients) {
         await tx.recipeIngredient.create({
           data: {
             recipeId: recipe.id,
-            productId: product.id,
-            quantity: ingredient.quantity,
-            unit: ingredient.unit,
+            productId: resolved.productId,
+            quantity: resolved.quantity,
+            unit: resolved.unit,
           },
         });
       }
@@ -282,6 +299,30 @@ export class RecipesService {
    * Uses a transaction to ensure all data is created consistently.
    */
   async updateFromParsedData(id: string, parsedData: ParsedRecipeData) {
+    // First, resolve all ingredients with fuzzy matching (outside transaction)
+    const resolvedIngredients: Array<{
+      productId: string;
+      quantity: number;
+      unit: string | undefined;
+    }> = [];
+    if (parsedData.ingredients && parsedData.ingredients.length > 0) {
+      for (const ingredient of parsedData.ingredients) {
+        const product = await this.ingredientsService.findOrCreate(
+          ingredient.name,
+        );
+        if (!product) {
+          throw new Error(
+            `Failed to find or create ingredient: ${ingredient.name}`,
+          );
+        }
+        resolvedIngredients.push({
+          productId: product.id,
+          quantity: ingredient.quantity,
+          unit: ingredient.unit,
+        });
+      }
+    }
+
     return this.prisma.$transaction(async (tx) => {
       // First, check if recipe exists
       const recipe = await tx.recipe.findUnique({
@@ -305,27 +346,14 @@ export class RecipesService {
         },
       });
 
-      // Create or find Ingredients and create RecipeIngredients
-      for (const ingredient of parsedData.ingredients) {
-        const normalized = this.normalizeName(ingredient.name);
-
-        // Find or create the ingredient
-        const product = await tx.ingredient.upsert({
-          where: { normalized },
-          update: {},
-          create: {
-            name: ingredient.name.trim(),
-            normalized,
-          },
-        });
-
-        // Create the recipe ingredient link
+      // Create recipe ingredient links using resolved IDs
+      for (const resolved of resolvedIngredients) {
         await tx.recipeIngredient.create({
           data: {
             recipeId: id,
-            productId: product.id,
-            quantity: ingredient.quantity,
-            unit: ingredient.unit,
+            productId: resolved.productId,
+            quantity: resolved.quantity,
+            unit: resolved.unit,
           },
         });
       }
