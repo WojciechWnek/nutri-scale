@@ -59,7 +59,7 @@ export class IngredientsService {
         includeScore: true,
       });
 
-      const results = fuse.search(name);
+      const results = fuse.search(normalized);
 
       if (results.length > 0) {
         const bestMatch = results[0];

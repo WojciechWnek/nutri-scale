@@ -16,13 +16,6 @@ export class RecipesService {
   ) {}
 
   /**
-   * Normalizes ingredient name to avoid duplicates
-   */
-  private normalizeName(name: string): string {
-    return name.toLowerCase().trim().replace(/\s+/g, ' ');
-  }
-
-  /**
    * Creates a new recipe from a DTO (e.g., from a form submission).
    * The recipe is considered complete by default.
    * Also creates related ingredients and instructions if provided.
