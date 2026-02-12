@@ -6,7 +6,6 @@ import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { PrismaModule } from 'prisma/prisma.module';
 import { IngredientsModule } from './ingredients/ingredients.module';
-import { NutritionModule } from './nutrition/nutrition.module';
 
 @Module({
   imports: [
@@ -17,7 +16,6 @@ import { NutritionModule } from './nutrition/nutrition.module';
     AuthModule,
     PrismaModule,
     IngredientsModule,
-    NutritionModule,
   ],
   controllers: [],
   providers: [],

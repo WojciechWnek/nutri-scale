@@ -11,6 +11,8 @@ import {
 import { IngredientsService } from './ingredients.service';
 import { CreateIngredientDto } from './dto/create-ingredient.dto';
 import { UpdateIngredientDto } from './dto/update-ingredient.dto';
+import { CreateIngredientNutritionDto } from './dto/create-ingredient-nutrition.dto';
+import { UpdateIngredientNutritionDto } from './dto/update-ingredient-nutrition.dto';
 
 @Controller('ingredients')
 export class IngredientsController {
@@ -56,12 +58,18 @@ export class IngredientsController {
   }
 
   @Post(':id/nutrition')
-  addNutrition(@Param('id') id: string, @Body() nutritionData: any) {
+  addNutrition(
+    @Param('id') id: string,
+    @Body() nutritionData: CreateIngredientNutritionDto,
+  ) {
     return this.ingredientsService.addNutrition(id, nutritionData);
   }
 
   @Patch(':id/nutrition')
-  updateNutrition(@Param('id') id: string, @Body() nutritionData: any) {
+  updateNutrition(
+    @Param('id') id: string,
+    @Body() nutritionData: UpdateIngredientNutritionDto,
+  ) {
     return this.ingredientsService.updateNutrition(id, nutritionData);
   }
 
