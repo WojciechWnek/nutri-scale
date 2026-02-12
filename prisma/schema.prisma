@@ -25,20 +25,66 @@ model User {
   email            String      @unique
   hashedPassword   String      
   createdAt        DateTime    @default(now())
-  updatedAt        DateTime    @updatedAt()
+  updatedAt        DateTime    @updatedAt
 }
 
 model Recipe {
-  id               String      @id @default(uuid())
-  status           JobStatus   @default(PROCESSING)
-  name             String?
-  description      String?
-  ingredients      Json?
-  instructions     Json?
-  prepTime         Int?
-  cookTime         Int?
-  servings         Int?
-  error            String?
-  createdAt        DateTime    @default(now())
-  updatedAt        DateTime    @updatedAt()
+  id          String         @id @default(uuid())
+  name        String
+  description String?
+  status      JobStatus    @default(PROCESSING)
+
+  prepTime    Int?
+  cookTime    Int?
+  servings    Int?
+
+  ingredients RecipeIngredient[]
+  instructions Instruction[]
+
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
+
+model Ingredient {
+  id    String   @id @default(uuid())
+  name  String   @unique
+
+  recipeIngredients RecipeIngredient[]
+  nutrition Nutrition?
+}
+
+model RecipeIngredient {
+  id         String           @id @default(uuid())
+  recipe     Recipe           @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  recipeId   String
+
+  product    Ingredient @relation(fields: [productId], references: [id])
+  productId  String
+
+  quantity   Float?
+  unit       String?
+}
+
+model Instruction {
+  id        String  @id @default(uuid())
+  recipe    Recipe  @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  recipeId  String
+
+  step      Int
+  content   String
+}
+
+model Nutrition {
+  id        String           @id @default(uuid())
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id])
+  ingredientId      String  @unique
+
+  caloriesPer100     Float
+  caloriesUnit   String
+  protein        Float?
+  carbs          Float?
+  fat            Float?
+  fiber          Float?
+
+  updatedAt DateTime @updatedAt
 }

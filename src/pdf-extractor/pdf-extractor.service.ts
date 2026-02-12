@@ -1,8 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { RecipeModel } from 'src/generated/prisma/models/Recipe';
+import {
+  ParsedRecipeData,
+  ParsedRecipesBatchDto,
+} from 'src/recipes/dto/parsed-recipe.dto';
 import { PDFParse } from 'pdf-parse';
 import Groq from 'groq-sdk';
+import * as path from 'path';
+import * as fs from 'fs/promises';
 
 @Injectable()
 export class PdfExtractorService {
@@ -41,27 +46,59 @@ export class PdfExtractorService {
     }
   }
 
-  async extractRecipeData(text: string): Promise<Partial<RecipeModel>> {
+  async extractRecipeData(text: string): Promise<ParsedRecipesBatchDto> {
     this.logger.log('Sending text to Groq API for processing...');
-    const prompt = `Given the following recipe text, extract the recipe details into a JSON object matching the TypeScript interface below. If a field is not found, omit it. For ingredients, try to separate name, quantity, and unit. For instructions, provide an array of strings for each step.
+    const prompt = `Given the following meal plan text, extract ALL recipes into a JSON object with a "recipes" array field matching the TypeScript interface below.
 
-TypeScript Interface for Recipe:
-interface Recipe {
+TypeScript Interface:
+interface ParsedRecipeData {
   name: string;
   description?: string;
-  ingredients: { name: string; quantity: number; unit: string }[];
-  instructions: string[];
-  prepTime?: number; // in minutes
-  cookTime?: number; // in minutes
+  prepTime?: number;
+  cookTime?: number;
   servings?: number;
+  ingredients: {
+    name: string;
+    quantity?: number;
+    unit?: string;
+  }[];
+  instructions: {
+    step: number;
+    content: string;
+  }[];
 }
+
+interface ParsedRecipesBatchDto {
+  recipes: ParsedRecipeData[];
+}
+
+Important rules:
+
+- The text may contain MULTIPLE recipes.
+- Each recipe should be returned as a SEPARATE object in the recipes array.
+- Do NOT wrap the output in markdown code blocks.
+- Return ONLY the raw JSON object with a "recipes" field containing the array.
+- Do NOT merge multiple meals into one recipe.
+- Recipes often start with a title in uppercase (e.g. "SPAGHETTI BOLOGNESE", "SAŁATKA BURAK Z FETĄ").
+- Ignore section labels like "ŚNIADANIE", "OBIAD", "KOLACJA" if they are not recipe names.
+- Extract ingredients with numeric quantities only; if no quantity exists, write null.
+- Number instruction steps starting from 1 for EACH recipe.
+- If a field is missing, omit it.
+
+Return ONLY a raw JSON object with the structure: {"recipes": [...]}. No markdown, no explanations.
 
 Recipe Text:
 ${text}
-
-IMPORTANT: Return ONLY the raw JSON object. Do not wrap it in markdown code blocks or add any other text.`;
+`;
 
     try {
+      const debugFilePath = path.join(
+        './uploads',
+        `${Date.now()}-parsed-prompt.txt`,
+      );
+      await fs.writeFile(debugFilePath, JSON.stringify(text, null, 2));
+      this.logger.log(`Parsed recipe data saved to ${debugFilePath}`);
+
       const completion = await this.groq.chat.completions.create({
         messages: [
           {
@@ -85,8 +122,18 @@ IMPORTANT: Return ONLY the raw JSON object. Do not wrap it in markdown code bloc
         throw new Error('Empty response from Groq API');
       }
 
-      const parsedData = JSON.parse(jsonText) as Partial<RecipeModel>;
-      this.logger.log('Groq API response parsed successfully.');
+      const parsedData = JSON.parse(jsonText) as ParsedRecipesBatchDto;
+
+      if (!parsedData.recipes || !Array.isArray(parsedData.recipes)) {
+        this.logger.error(
+          'Invalid response structure. Expected {recipes: [...]}',
+        );
+        throw new Error('Invalid response structure from AI model');
+      }
+
+      this.logger.log(
+        `Groq API response parsed successfully. Found ${parsedData.recipes.length} recipes.`,
+      );
       return parsedData;
     } catch (error) {
       this.logger.error('Error calling Groq API or parsing response:', error);

@@ -52,7 +52,11 @@ export const AnyNull = runtime.AnyNull
 
 export const ModelName = {
   User: 'User',
-  Recipe: 'Recipe'
+  Recipe: 'Recipe',
+  Ingredient: 'Ingredient',
+  RecipeIngredient: 'RecipeIngredient',
+  Instruction: 'Instruction',
+  Nutrition: 'Nutrition'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -84,20 +88,61 @@ export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof User
 
 export const RecipeScalarFieldEnum = {
   id: 'id',
-  status: 'status',
   name: 'name',
   description: 'description',
-  ingredients: 'ingredients',
-  instructions: 'instructions',
+  status: 'status',
   prepTime: 'prepTime',
   cookTime: 'cookTime',
   servings: 'servings',
-  error: 'error',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
 
 export type RecipeScalarFieldEnum = (typeof RecipeScalarFieldEnum)[keyof typeof RecipeScalarFieldEnum]
+
+
+export const IngredientScalarFieldEnum = {
+  id: 'id',
+  name: 'name'
+} as const
+
+export type IngredientScalarFieldEnum = (typeof IngredientScalarFieldEnum)[keyof typeof IngredientScalarFieldEnum]
+
+
+export const RecipeIngredientScalarFieldEnum = {
+  id: 'id',
+  recipeId: 'recipeId',
+  productId: 'productId',
+  quantity: 'quantity',
+  unit: 'unit'
+} as const
+
+export type RecipeIngredientScalarFieldEnum = (typeof RecipeIngredientScalarFieldEnum)[keyof typeof RecipeIngredientScalarFieldEnum]
+
+
+export const InstructionScalarFieldEnum = {
+  id: 'id',
+  recipeId: 'recipeId',
+  step: 'step',
+  content: 'content'
+} as const
+
+export type InstructionScalarFieldEnum = (typeof InstructionScalarFieldEnum)[keyof typeof InstructionScalarFieldEnum]
+
+
+export const NutritionScalarFieldEnum = {
+  id: 'id',
+  ingredientId: 'ingredientId',
+  caloriesPer100: 'caloriesPer100',
+  caloriesUnit: 'caloriesUnit',
+  protein: 'protein',
+  carbs: 'carbs',
+  fat: 'fat',
+  fiber: 'fiber',
+  updatedAt: 'updatedAt'
+} as const
+
+export type NutritionScalarFieldEnum = (typeof NutritionScalarFieldEnum)[keyof typeof NutritionScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -108,29 +153,12 @@ export const SortOrder = {
 export type SortOrder = (typeof SortOrder)[keyof typeof SortOrder]
 
 
-export const NullableJsonNullValueInput = {
-  DbNull: DbNull,
-  JsonNull: JsonNull
-} as const
-
-export type NullableJsonNullValueInput = (typeof NullableJsonNullValueInput)[keyof typeof NullableJsonNullValueInput]
-
-
 export const QueryMode = {
   default: 'default',
   insensitive: 'insensitive'
 } as const
 
 export type QueryMode = (typeof QueryMode)[keyof typeof QueryMode]
-
-
-export const JsonNullValueFilter = {
-  DbNull: DbNull,
-  JsonNull: JsonNull,
-  AnyNull: AnyNull
-} as const
-
-export type JsonNullValueFilter = (typeof JsonNullValueFilter)[keyof typeof JsonNullValueFilter]
 
 
 export const NullsOrder = {

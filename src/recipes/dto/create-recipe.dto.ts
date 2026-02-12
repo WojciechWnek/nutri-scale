@@ -4,18 +4,31 @@ import {
   IsArray,
   IsNumber,
   ValidateNested,
+  Min,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
-class IngredientDto {
+class CreateIngredientDto {
   @IsString()
   name: string;
 
   @IsNumber()
-  quantity: number;
+  @Min(0)
+  @IsOptional()
+  quantity?: number;
 
   @IsString()
-  unit: string;
+  @IsOptional()
+  unit?: string;
+}
+
+class CreateInstructionDto {
+  @IsNumber()
+  @Min(1)
+  step: number;
+
+  @IsString()
+  content: string;
 }
 
 export class CreateRecipeDto {
@@ -26,26 +39,30 @@ export class CreateRecipeDto {
   @IsOptional()
   description?: string;
 
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => IngredientDto)
-  @IsOptional()
-  ingredients?: IngredientDto[];
-
-  @IsArray()
-  @IsString({ each: true })
-  @IsOptional()
-  instructions?: string[];
-
   @IsNumber()
   @IsOptional()
+  @Min(0)
   prepTime?: number;
 
   @IsNumber()
   @IsOptional()
+  @Min(0)
   cookTime?: number;
 
   @IsNumber()
   @IsOptional()
+  @Min(1)
   servings?: number;
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateIngredientDto)
+  @IsOptional()
+  ingredients?: CreateIngredientDto[];
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateInstructionDto)
+  @IsOptional()
+  instructions?: CreateInstructionDto[];
 }

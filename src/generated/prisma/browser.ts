@@ -27,3 +27,23 @@ export type User = Prisma.UserModel
  * 
  */
 export type Recipe = Prisma.RecipeModel
+/**
+ * Model Ingredient
+ * 
+ */
+export type Ingredient = Prisma.IngredientModel
+/**
+ * Model RecipeIngredient
+ * 
+ */
+export type RecipeIngredient = Prisma.RecipeIngredientModel
+/**
+ * Model Instruction
+ * 
+ */
+export type Instruction = Prisma.InstructionModel
+/**
+ * Model Nutrition
+ * 
+ */
+export type Nutrition = Prisma.NutritionModel

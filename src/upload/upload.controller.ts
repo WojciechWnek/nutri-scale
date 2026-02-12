@@ -16,14 +16,12 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import type { Request } from 'express';
 import { UploadService } from './upload.service';
-import { RecipesService } from '../recipes/recipes.service';
 
 @Controller('upload')
 export class UploadController {
   constructor(
     private readonly sseService: SseService,
     private readonly uploadService: UploadService,
-    private readonly recipesService: RecipesService,
   ) {}
 
   @Post('pdf')
@@ -54,19 +52,24 @@ export class UploadController {
   )
   async uploadPdf(
     @UploadedFile() file: Express.Multer.File,
-  ): Promise<{ jobId: string }> {
+  ): Promise<{ jobId: string; message: string }> {
     if (!file) {
       throw new BadRequestException('No PDF file provided!');
     }
 
-    // Create an empty recipe to get a persistent ID.
-    const recipe = await this.recipesService.createEmpty();
+    // Generate the batch job ID for SSE tracking
+    const jobId = `batch-${Date.now()}`;
 
-    // Delegate the processing, passing the recipe ID.
-    this.uploadService.processPdfJob(file, recipe.id);
+    // Start the batch processing job
+    // processPdfJob now returns a Promise that resolves when done,
+    // but we don't await it - it runs in background
+    this.uploadService.processPdfJob(file, jobId);
 
-    // Return the recipe ID to the client as the jobId.
-    return { jobId: recipe.id };
+    return {
+      jobId,
+      message:
+        'PDF processing started. Connect to SSE stream to track progress and get recipe IDs.',
+    };
   }
 
   @Sse('status/:jobId')
