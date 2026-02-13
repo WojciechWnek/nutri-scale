@@ -10,25 +10,15 @@ import { PrismaService } from 'prisma/prisma.service';
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getMyUser(id: string, req: Request) {
-    const myUser = await this.prisma.user.findUnique({
-      select: { id: true, email: true, createdAt: true, updatedAt: true },
+  async getUser(id: string) {
+    const user = await this.prisma.user.findUnique({
+      select: { email: true, createdAt: true },
       where: {
         id,
       },
     });
 
-    if (!myUser) {
-      throw new NotFoundException('User not found');
-    }
-
-    const decodedUser = req.user as { userId: string; email: string };
-
-    if (myUser.id !== decodedUser.userId) {
-      throw new ForbiddenException('User not found');
-    }
-
-    return myUser;
+    return user;
   }
 
   async getAllUsers() {
