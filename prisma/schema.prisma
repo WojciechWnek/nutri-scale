@@ -23,9 +23,23 @@ enum JobStatus {
 model User {
   id               String      @id @default(uuid())
   email            String      @unique
-  hashedPassword   String      
+  hashedPassword   String
+  emailVerified    Boolean     @default(false)
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
+
+  verificationTokens VerificationToken[]
+}
+
+model VerificationToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([token])
 }
 
 model Recipe {
