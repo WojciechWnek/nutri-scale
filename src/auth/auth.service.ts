@@ -11,6 +11,8 @@ import {
   SignUpDto,
   SignInDto,
   ResendVerificationEmailDto,
+  RequestPasswordResetDto,
+  ResetPasswordDto,
 } from './dto/auth.dto';
 import { EmailService } from './email.service';
 import type { Response } from 'express';
@@ -161,6 +163,76 @@ export class AuthService {
     return {
       message: 'Verification email sent successfully',
     };
+  }
+
+  async requestPasswordReset(dto: RequestPasswordResetDto) {
+    const { email } = dto;
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    await this.prisma.passwordResetToken.deleteMany({
+      where: { userId: user.id },
+    });
+
+    const token = await this.createPasswordResetToken(user.id);
+    await this.emailService.sendPasswordResetEmail(email, token);
+
+    return {
+      message: 'Password reset email sent successfully',
+    };
+  }
+
+  async resetPassword(dto: ResetPasswordDto) {
+    const { token, password } = dto;
+
+    const resetToken = await this.prisma.passwordResetToken.findUnique({
+      where: { token },
+      include: { user: true },
+    });
+
+    if (!resetToken) {
+      throw new BadRequestException('Invalid reset token');
+    }
+
+    if (resetToken.expiresAt < new Date()) {
+      throw new BadRequestException('Reset token has expired');
+    }
+
+    const hashedPassword = await this.hashPassword(password);
+
+    await this.prisma.user.update({
+      where: { id: resetToken.userId },
+      data: { hashedPassword },
+    });
+
+    await this.prisma.passwordResetToken.delete({
+      where: { id: resetToken.id },
+    });
+
+    return {
+      message: 'Password reset successfully',
+    };
+  }
+
+  private async createPasswordResetToken(userId: string): Promise<string> {
+    const token = randomUUID();
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 1);
+
+    await this.prisma.passwordResetToken.create({
+      data: {
+        token,
+        userId,
+        expiresAt,
+      },
+    });
+
+    return token;
   }
 
   private async createVerificationToken(userId: string): Promise<string> {

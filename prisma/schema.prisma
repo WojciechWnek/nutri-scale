@@ -29,9 +29,21 @@ model User {
   updatedAt        DateTime    @updatedAt
 
   verificationTokens VerificationToken[]
+  passwordResetTokens PasswordResetToken[]
 }
 
 model VerificationToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([token])
+}
+
+model PasswordResetToken {
   id        String   @id @default(uuid())
   token     String   @unique
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)

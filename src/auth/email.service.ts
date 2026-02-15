@@ -49,4 +49,32 @@ export class EmailService {
 
     this.logger.log(`Verification email sent to ${email}`);
   }
+
+  async sendPasswordResetEmail(email: string, token: string): Promise<void> {
+    const resetUrl = `${this.configService.get('FRONTEND_URL') || 'http://localhost:3000'}/reset-password?token=${token}`;
+
+    if (!this.transporter) {
+      this.logger.log(`[DEV MODE] Password reset email for ${email}:`);
+      this.logger.log(`URL: ${resetUrl}`);
+      this.logger.log(`Token: ${token}`);
+      return;
+    }
+
+    await this.transporter.sendMail({
+      from: this.configService.get('SMTP_FROM'),
+      to: email,
+      subject: 'Reset your password',
+      html: `
+        <h1>Password Reset</h1>
+        <p>You requested a password reset. Click the link below to reset your password:</p>
+        <a href="${resetUrl}" style="padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px;">Reset Password</a>
+        <p>Or copy and paste this URL into your browser:</p>
+        <p>${resetUrl}</p>
+        <p>This link will expire in 1 hour.</p>
+        <p>If you didn't request this, please ignore this email.</p>
+      `,
+    });
+
+    this.logger.log(`Password reset email sent to ${email}`);
+  }
 }

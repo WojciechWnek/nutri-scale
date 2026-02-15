@@ -4,6 +4,8 @@ import {
   SignUpDto,
   SignInDto,
   ResendVerificationEmailDto,
+  RequestPasswordResetDto,
+  ResetPasswordDto,
 } from './dto/auth.dto';
 import type { Response } from 'express';
 
@@ -37,5 +39,15 @@ export class AuthController {
   @Post('resend-verification')
   resendVerificationEmail(@Body() dto: ResendVerificationEmailDto) {
     return this.authService.resendVerificationEmail(dto);
+  }
+
+  @Post('forgot-password')
+  requestPasswordReset(@Body() dto: RequestPasswordResetDto) {
+    return this.authService.requestPasswordReset(dto);
+  }
+
+  @Post('reset-password')
+  resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.authService.resetPassword(dto);
   }
 }
