@@ -13,6 +13,7 @@ import {
   ResendVerificationEmailDto,
   RequestPasswordResetDto,
   ResetPasswordDto,
+  RefreshTokenDto,
 } from './dto/auth.dto';
 import { EmailService } from './email.service';
 import type { Response } from 'express';
@@ -81,16 +82,28 @@ export class AuthService {
       );
     }
 
-    const token = await this.signToken(existingUser.id, existingUser.email);
+    const accessToken = await this.signAccessToken(
+      existingUser.id,
+      existingUser.email,
+    );
+    const refreshToken = await this.createRefreshToken(existingUser.id);
 
-    if (!token) {
+    if (!accessToken) {
       throw new ForbiddenException();
     }
 
-    res.cookie('access_token', token, {
+    res.cookie('access_token', accessToken, {
       httpOnly: true,
       secure: true,
       sameSite: 'strict',
+      maxAge: 15 * 60 * 1000, // 15 minutes
+    });
+
+    res.cookie('refresh_token', refreshToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
     return {
@@ -98,10 +111,79 @@ export class AuthService {
     };
   }
 
-  signout(res: Response) {
+  signout(res: Response, refreshToken?: string) {
     res.clearCookie('access_token');
+    res.clearCookie('refresh_token');
+
+    if (refreshToken) {
+      this.revokeRefreshToken(refreshToken);
+    }
+
     return {
       message: 'User signed out successfully',
+    };
+  }
+
+  async refreshTokens(refreshToken: string, res: Response) {
+    const hashedToken = await this.hashToken(refreshToken);
+
+    const tokenRecord = await this.prisma.refreshToken.findUnique({
+      where: { token: hashedToken },
+      include: { user: true },
+    });
+
+    if (!tokenRecord) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    if (tokenRecord.expiresAt < new Date()) {
+      await this.prisma.refreshToken.delete({
+        where: { id: tokenRecord.id },
+      });
+      throw new UnauthorizedException('Refresh token has expired');
+    }
+
+    // Rotate: Delete old refresh token
+    await this.prisma.refreshToken.delete({
+      where: { id: tokenRecord.id },
+    });
+
+    // Issue new tokens
+    const newAccessToken = await this.signAccessToken(
+      tokenRecord.user.id,
+      tokenRecord.user.email,
+    );
+    const newRefreshToken = await this.createRefreshToken(tokenRecord.user.id);
+
+    res.cookie('access_token', newAccessToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'strict',
+      maxAge: 15 * 60 * 1000,
+    });
+
+    res.cookie('refresh_token', newRefreshToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    return {
+      message: 'Tokens refreshed successfully',
+    };
+  }
+
+  async signoutAllDevices(userId: string, res: Response) {
+    await this.prisma.refreshToken.deleteMany({
+      where: { userId },
+    });
+
+    res.clearCookie('access_token');
+    res.clearCookie('refresh_token');
+
+    return {
+      message: 'Signed out from all devices successfully',
     };
   }
 
@@ -251,13 +333,13 @@ export class AuthService {
     return token;
   }
 
-  async hashPassword(password: string): Promise<string> {
+  private async hashPassword(password: string): Promise<string> {
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
     return hashedPassword;
   }
 
-  async comparePasswords(
+  private async comparePasswords(
     password: string,
     hashedPassword: string,
   ): Promise<boolean> {
@@ -265,8 +347,40 @@ export class AuthService {
     return isMatch;
   }
 
-  async signToken(userId: string, email: string): Promise<string> {
+  private async signAccessToken(
+    userId: string,
+    email: string,
+  ): Promise<string> {
     const payload = { id: userId, email };
     return this.jwtService.signAsync(payload);
+  }
+
+  private async createRefreshToken(userId: string): Promise<string> {
+    const token = randomUUID();
+    const hashedToken = await this.hashToken(token);
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
+
+    await this.prisma.refreshToken.create({
+      data: {
+        token: hashedToken,
+        userId,
+        expiresAt,
+      },
+    });
+
+    return token;
+  }
+
+  private async hashToken(token: string): Promise<string> {
+    const saltRounds = 10;
+    return bcrypt.hash(token, saltRounds);
+  }
+
+  private async revokeRefreshToken(token: string): Promise<void> {
+    const hashedToken = await this.hashToken(token);
+    await this.prisma.refreshToken.deleteMany({
+      where: { token: hashedToken },
+    });
   }
 }

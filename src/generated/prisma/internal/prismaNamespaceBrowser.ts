@@ -54,6 +54,7 @@ export const ModelName = {
   User: 'User',
   VerificationToken: 'VerificationToken',
   PasswordResetToken: 'PasswordResetToken',
+  RefreshToken: 'RefreshToken',
   Recipe: 'Recipe',
   Ingredient: 'Ingredient',
   RecipeIngredient: 'RecipeIngredient',
@@ -109,6 +110,17 @@ export const PasswordResetTokenScalarFieldEnum = {
 } as const
 
 export type PasswordResetTokenScalarFieldEnum = (typeof PasswordResetTokenScalarFieldEnum)[keyof typeof PasswordResetTokenScalarFieldEnum]
+
+
+export const RefreshTokenScalarFieldEnum = {
+  id: 'id',
+  token: 'token',
+  userId: 'userId',
+  expiresAt: 'expiresAt',
+  createdAt: 'createdAt'
+} as const
+
+export type RefreshTokenScalarFieldEnum = (typeof RefreshTokenScalarFieldEnum)[keyof typeof RefreshTokenScalarFieldEnum]
 
 
 export const RecipeScalarFieldEnum = {

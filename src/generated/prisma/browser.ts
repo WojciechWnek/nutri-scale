@@ -33,6 +33,11 @@ export type VerificationToken = Prisma.VerificationTokenModel
  */
 export type PasswordResetToken = Prisma.PasswordResetTokenModel
 /**
+ * Model RefreshToken
+ * 
+ */
+export type RefreshToken = Prisma.RefreshTokenModel
+/**
  * Model Recipe
  * 
  */

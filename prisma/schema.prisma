@@ -30,6 +30,7 @@ model User {
 
   verificationTokens VerificationToken[]
   passwordResetTokens PasswordResetToken[]
+  refreshTokens      RefreshToken[]
 }
 
 model VerificationToken {
@@ -52,6 +53,18 @@ model PasswordResetToken {
   createdAt DateTime @default(now())
 
   @@index([token])
+}
+
+model RefreshToken {
+  id          String   @id @default(uuid())
+  token       String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+
+  @@index([token])
+  @@index([userId])
 }
 
 model Recipe {

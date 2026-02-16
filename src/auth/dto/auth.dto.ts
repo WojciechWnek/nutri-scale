@@ -38,3 +38,9 @@ export class ResetPasswordDto {
   @Length(8, 100, { message: 'Password must be at least 8 characters long' })
   password: string;
 }
+
+export class RefreshTokenDto {
+  @IsString()
+  @IsNotEmpty()
+  refreshToken: string;
+}
