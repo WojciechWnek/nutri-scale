@@ -6,6 +6,7 @@ import {
   Res,
   Req,
   UnauthorizedException,
+  UseGuards,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import {
@@ -17,6 +18,7 @@ import {
 } from './dto/auth.dto';
 import { Public } from './decorators/public.decorator';
 import type { Response, Request } from 'express';
+import { ThrottlerGuard } from '@nestjs/throttler';
 
 interface RequestWithUser extends Request {
   user?: { sub: string; email: string; type: string };
@@ -32,6 +34,7 @@ export class AuthController {
     return this.authService.signup(signUpDto);
   }
 
+  @UseGuards(ThrottlerGuard)
   @Public()
   @Post('signin')
   signin(
@@ -72,24 +75,28 @@ export class AuthController {
     return this.authService.signoutAllDevices(userId, res);
   }
 
+  @UseGuards(ThrottlerGuard)
   @Public()
   @Post('verify-email')
   verifyEmail(@Query('token') token: string) {
     return this.authService.verifyEmail(token);
   }
 
+  @UseGuards(ThrottlerGuard)
   @Public()
   @Post('resend-verification')
   resendVerificationEmail(@Body() dto: ResendVerificationEmailDto) {
     return this.authService.resendVerificationEmail(dto);
   }
 
+  @UseGuards(ThrottlerGuard)
   @Public()
   @Post('forgot-password')
   requestPasswordReset(@Body() dto: RequestPasswordResetDto) {
     return this.authService.requestPasswordReset(dto);
   }
 
+  @UseGuards(ThrottlerGuard)
   @Public()
   @Post('reset-password')
   resetPassword(@Body() dto: ResetPasswordDto) {

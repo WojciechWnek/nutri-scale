@@ -5,6 +5,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { EmailService } from './email.service';
+import { ThrottlerModule } from '@nestjs/throttler';
 
 @Module({
   imports: [
@@ -19,6 +20,14 @@ import { EmailService } from './email.service';
           expiresIn: config.getOrThrow('JWT_EXPIRES_IN'),
         },
       }),
+    }),
+    ThrottlerModule.forRoot({
+      throttlers: [
+        {
+          ttl: 10 * 60 * 1000,
+          limit: 10,
+        },
+      ],
     }),
   ],
   controllers: [AuthController],
