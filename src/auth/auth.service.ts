@@ -362,7 +362,11 @@ export class AuthService {
     userId: string,
     email: string,
   ): Promise<string> {
-    const payload = { id: userId, email };
+    const payload = {
+      sub: userId,
+      email,
+      type: 'access',
+    };
     return this.jwtService.signAsync(payload);
   }
 

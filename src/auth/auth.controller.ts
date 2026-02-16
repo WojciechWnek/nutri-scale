@@ -19,7 +19,7 @@ import { Public } from './decorators/public.decorator';
 import type { Response, Request } from 'express';
 
 interface RequestWithUser extends Request {
-  user?: { id: string; email: string };
+  user?: { sub: string; email: string; type: string };
 }
 
 @Controller('auth')
@@ -65,7 +65,7 @@ export class AuthController {
     @Req() req: RequestWithUser,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const userId = req.user?.id;
+    const userId = req.user?.sub;
     if (!userId) {
       throw new UnauthorizedException('User not authenticated');
     }
