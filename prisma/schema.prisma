@@ -57,13 +57,14 @@ model PasswordResetToken {
 
 model RefreshToken {
   id          String   @id @default(uuid())
-  token       String   @unique
+  lookupHash  String   @unique  // SHA-256 for database lookup
+  bcryptHash  String             // bcrypt for verification
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId      String
   expiresAt   DateTime
   createdAt   DateTime @default(now())
 
-  @@index([token])
+  @@index([lookupHash])
   @@index([userId])
 }
 

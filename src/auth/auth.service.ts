@@ -17,7 +17,7 @@ import {
 } from './dto/auth.dto';
 import { EmailService } from './email.service';
 import type { Response } from 'express';
-import { randomUUID } from 'crypto';
+import { randomUUID, createHash } from 'crypto';
 
 @Injectable()
 export class AuthService {
@@ -94,14 +94,14 @@ export class AuthService {
 
     res.cookie('access_token', accessToken, {
       httpOnly: true,
-      secure: true,
+      secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
       maxAge: 15 * 60 * 1000, // 15 minutes
     });
 
     res.cookie('refresh_token', refreshToken, {
       httpOnly: true,
-      secure: true,
+      secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
@@ -125,14 +125,20 @@ export class AuthService {
   }
 
   async refreshTokens(refreshToken: string, res: Response) {
-    const hashedToken = await this.hashToken(refreshToken);
+    const lookupHash = this.generateLookupHash(refreshToken);
 
     const tokenRecord = await this.prisma.refreshToken.findUnique({
-      where: { token: hashedToken },
+      where: { lookupHash },
       include: { user: true },
     });
 
     if (!tokenRecord) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    // Verify the token using bcrypt
+    const isValid = await bcrypt.compare(refreshToken, tokenRecord.bcryptHash);
+    if (!isValid) {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
@@ -157,14 +163,14 @@ export class AuthService {
 
     res.cookie('access_token', newAccessToken, {
       httpOnly: true,
-      secure: true,
+      secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
       maxAge: 15 * 60 * 1000,
     });
 
     res.cookie('refresh_token', newRefreshToken, {
       httpOnly: true,
-      secure: true,
+      secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
@@ -254,7 +260,7 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new BadRequestException('User not found');
+      throw new BadRequestException('If email exists, we sent reset link.');
     }
 
     await this.prisma.passwordResetToken.deleteMany({
@@ -290,6 +296,11 @@ export class AuthService {
     await this.prisma.user.update({
       where: { id: resetToken.userId },
       data: { hashedPassword },
+    });
+
+    // Revoke all refresh tokens - user must re-login on all devices
+    await this.prisma.refreshToken.deleteMany({
+      where: { userId: resetToken.userId },
     });
 
     await this.prisma.passwordResetToken.delete({
@@ -357,13 +368,15 @@ export class AuthService {
 
   private async createRefreshToken(userId: string): Promise<string> {
     const token = randomUUID();
-    const hashedToken = await this.hashToken(token);
+    const lookupHash = this.generateLookupHash(token);
+    const bcryptHash = await this.hashToken(token);
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
 
     await this.prisma.refreshToken.create({
       data: {
-        token: hashedToken,
+        lookupHash,
+        bcryptHash,
         userId,
         expiresAt,
       },
@@ -372,15 +385,19 @@ export class AuthService {
     return token;
   }
 
+  private generateLookupHash(token: string): string {
+    return createHash('sha256').update(token).digest('hex');
+  }
+
   private async hashToken(token: string): Promise<string> {
     const saltRounds = 10;
     return bcrypt.hash(token, saltRounds);
   }
 
   private async revokeRefreshToken(token: string): Promise<void> {
-    const hashedToken = await this.hashToken(token);
+    const lookupHash = this.generateLookupHash(token);
     await this.prisma.refreshToken.deleteMany({
-      where: { token: hashedToken },
+      where: { lookupHash },
     });
   }
 }

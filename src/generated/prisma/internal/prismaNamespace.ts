@@ -1153,7 +1153,8 @@ export type PasswordResetTokenScalarFieldEnum = (typeof PasswordResetTokenScalar
 
 export const RefreshTokenScalarFieldEnum = {
   id: 'id',
-  token: 'token',
+  lookupHash: 'lookupHash',
+  bcryptHash: 'bcryptHash',
   userId: 'userId',
   expiresAt: 'expiresAt',
   createdAt: 'createdAt'
