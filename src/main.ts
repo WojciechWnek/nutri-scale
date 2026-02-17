@@ -11,6 +11,7 @@ async function bootstrap() {
     .setTitle('Nutri-Scale API')
     .setDescription('API documentation for the Nutri-Scale application')
     .setVersion('1.0')
+    .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
