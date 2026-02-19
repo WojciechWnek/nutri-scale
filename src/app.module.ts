@@ -11,7 +11,7 @@ import { JwtAuthGuard } from './auth/jwt-auth.guard';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({ envFilePath: '.envs/.local/.nest', isGlobal: true }),
     RecipesModule,
     UploadModule,
     UsersModule,

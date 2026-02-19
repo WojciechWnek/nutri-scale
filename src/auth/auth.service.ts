@@ -18,14 +18,21 @@ import {
 import { EmailService } from './email.service';
 import type { Response } from 'express';
 import { randomUUID, createHash } from 'crypto';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AuthService {
+  private isProd = false;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly emailService: EmailService,
-  ) {}
+    private readonly configService: ConfigService,
+  ) {
+    this.isProd =
+      this.configService.getOrThrow<string>('NODE_ENV') === 'production';
+  }
 
   async signup(signUpDto: SignUpDto) {
     const { email, password } = signUpDto;
@@ -94,14 +101,14 @@ export class AuthService {
 
     res.cookie('access_token', accessToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: this.isProd,
       sameSite: 'strict',
       maxAge: 15 * 60 * 1000, // 15 minutes
     });
 
     res.cookie('refresh_token', refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: this.isProd,
       sameSite: 'strict',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
@@ -163,14 +170,14 @@ export class AuthService {
 
     res.cookie('access_token', newAccessToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: this.isProd,
       sameSite: 'strict',
       maxAge: 15 * 60 * 1000,
     });
 
     res.cookie('refresh_token', newRefreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: this.isProd,
       sameSite: 'strict',
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
