@@ -2,7 +2,7 @@ services:
   app:
     build:
       context: .
-      dockerfile: ./compose/local/nestjs/Dockerfile
+      dockerfile: ./compose/local/Dockerfile
     container_name: nutri_scale_app
     ports:
       - '8000:8000'
@@ -12,9 +12,7 @@ services:
       - db
 
   db:
-    build:
-      context: .
-      dockerfile: ./compose/local/postgres/Dockerfile
+    image: postgres:16-alpine
     container_name: nutri_scale_db
     env_file:
       - .envs/.local/.postgres
