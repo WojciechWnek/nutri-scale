@@ -92,12 +92,13 @@ ${text}
 `;
 
     try {
-      const debugFilePath = path.join(
-        './uploads',
-        `${Date.now()}-parsed-prompt.txt`,
-      );
-      await fs.writeFile(debugFilePath, JSON.stringify(text, null, 2));
-      this.logger.log(`Parsed recipe data saved to ${debugFilePath}`);
+      // Debugging: Save the prompt to a file for inspection
+      // const debugFilePath = path.join(
+      //   './uploads',
+      //   `${Date.now()}-parsed-prompt.txt`,
+      // );
+      // await fs.writeFile(debugFilePath, JSON.stringify(text, null, 2));
+      // this.logger.log(`Parsed recipe data saved to ${debugFilePath}`);
 
       const completion = await this.groq.chat.completions.create({
         messages: [

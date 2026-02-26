@@ -8,26 +8,26 @@ import { RecipesService } from '../recipes/recipes.service';
 @Injectable()
 export class UploadService {
   private readonly logger = new Logger(UploadService.name);
-  private readonly uploadDir = './uploads';
+  // private readonly uploadDir = './uploads';
 
   constructor(
     private readonly sseService: SseService,
     private readonly pdfExtractorService: PdfExtractorService,
     private readonly recipesService: RecipesService,
   ) {
-    this.ensureUploadDirExists();
+    // this.ensureUploadDirExists();
   }
 
-  private async ensureUploadDirExists() {
-    try {
-      await fs.access(this.uploadDir);
-    } catch {
-      this.logger.log(
-        `Upload directory not found. Creating: ${this.uploadDir}`,
-      );
-      await fs.mkdir(this.uploadDir, { recursive: true });
-    }
-  }
+  // private async ensureUploadDirExists() {
+  //   try {
+  //     await fs.access(this.uploadDir);
+  //   } catch {
+  //     this.logger.log(
+  //       `Upload directory not found. Creating: ${this.uploadDir}`,
+  //     );
+  //     await fs.mkdir(this.uploadDir, { recursive: true });
+  //   }
+  // }
 
   private async cleanupFile(filePath: string): Promise<void> {
     try {
@@ -61,9 +61,9 @@ export class UploadService {
     let filePath: string | null = null;
 
     try {
-      filePath = path.join(this.uploadDir, filename);
-      await fs.writeFile(filePath, file.buffer);
-      this.logger.log(`File saved to ${filePath}`);
+      // filePath = path.join(this.uploadDir, filename);
+      // await fs.writeFile(filePath, file.buffer);
+      // this.logger.log(`File saved to ${filePath}`);
 
       this.sseService.sendEvent(batchJobId, 'parsingStatus', {
         status: 'extracting_text',
@@ -83,12 +83,12 @@ export class UploadService {
       );
 
       // Save parsed recipes to txt file for debugging
-      const debugFilePath = path.join(
-        this.uploadDir,
-        `${Date.now()}-parsed-${file.originalname}.txt`,
-      );
-      await fs.writeFile(debugFilePath, JSON.stringify(parsedBatch, null, 2));
-      this.logger.log(`Parsed batch data saved to ${debugFilePath}`);
+      // const debugFilePath = path.join(
+      //   this.uploadDir,
+      //   `${Date.now()}-parsed-${file.originalname}.txt`,
+      // );
+      // await fs.writeFile(debugFilePath, JSON.stringify(parsedBatch, null, 2));
+      // this.logger.log(`Parsed batch data saved to ${debugFilePath}`);
 
       this.sseService.sendEvent(batchJobId, 'parsingStatus', {
         status: 'saving_recipes',
