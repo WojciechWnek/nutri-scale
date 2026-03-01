@@ -58,7 +58,7 @@ export class UploadService {
     });
 
     const filename = `${Date.now()}-${file.originalname}`;
-    let filePath: string | null = null;
+    const filePath: string | null = null;
 
     try {
       // filePath = path.join(this.uploadDir, filename);
