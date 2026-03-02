@@ -27,20 +27,23 @@ jobs:
           aws-region: us-east-1
 
       - name: Login to Amazon ECR
-        run: |
-          aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
 
       - name: Build and push Docker image
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
           docker buildx create --use
-          docker buildx inspect --bootstrap
-          docker buildx build --platform linux/arm64 -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$ECR_IMAGE:latest --push .
+          docker buildx build \
+            --platform linux/arm64 \
+            -t $REGISTRY/$ECR_IMAGE:${{ github.sha }} \
+            -t $REGISTRY/$ECR_IMAGE:latest \
+            --push .
 
       # - name: Deploy to ECS
-      #   uses: imehedi/actions-awscli-v2@latest
-      #   with:
-      #     args: ecs update-service --cluster MpcsjNestJSStabilityIntegration --service MpcsjStabilityAPI --force-new-deployment
-      #   env:
-      #     AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      #     AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      #     AWS_DEFAULT_REGION: 'us-east-1'
+      #   run: |
+      #     aws ecs update-service \
+      #       --cluster MpcsjNestJSStabilityIntegration \
+      #       --service MpcsjStabilityAPI \
+      #       --force-new-deployment
